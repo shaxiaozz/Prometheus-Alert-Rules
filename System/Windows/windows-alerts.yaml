@@ -1,0 +1,143 @@
+kind: PrometheusRule
+apiVersion: monitoring.coreos.com/v1
+metadata:
+  prometheus: dx
+spec:
+  groups:
+    - name: windows-alert
+      interval: 10m
+      rules:
+        - expr: windows_service_status{status="ok",name="w3svc"} == 0
+          alert: '[P0]-IIS服务不健康'
+          for: 30s
+          labels:
+            severity: critical
+          annotations:
+            level: P0
+            description: >-
+              实例为 {{ $labels.instance }} 的服务器，服务 {{ $labels.name
+              }}，状态不健康，请检查服务器服务
+            ruleGroupName: windows-alert
+            ruleName: '[P0]-IIS服务不健康'
+            type: windows
+        - expr: windows_exporter_collector_success == 0
+          alert: '[P1]-Windows 采集数据失败'
+          for: 2m
+          labels:
+            severity: error
+          annotations:
+            description: 实例为 {{ $labels.instance }} 的服务器，采集{{ $labels.collector }}失败，请检查服务器及Exporter状态
+            level: P1
+            ruleGroupName: windows-alert
+            ruleName: '[P1]-Windows 采集数据失败'
+            type: windows
+        - expr: 100 - ((windows_os_physical_memory_free_bytes / windows_cs_physical_memory_bytes) * 100) > 95
+          alert: '[P1]-Windows 内存使用率高'
+          for: 5m
+          labels:
+            severity: error
+          annotations:
+            description: 实例为 {{ $labels.instance }} 的服务器，内存使用率高> 95%，实际使用率为{{ humanize $value }}%，找到对应进程，留意业务高峰
+            level: P1
+            ruleGroupName: windows-alert
+            ruleName: '[P1]-Windows 内存使用率高'
+            type: windows
+        - expr: 100.0 - 100 * ((windows_logical_disk_free_bytes / 1024 / 1024 ) / (windows_logical_disk_size_bytes / 1024 / 1024)) >  95
+          alert: '[P1]-Windows 硬盘空间使用率高'
+          for: 5m
+          labels:
+            severity: error
+          annotations:
+            description: 实例为 {{ $labels.instance }} 的服务器，硬盘空间使用率高> 95%，实际使用率为{{ humanize $value }}%，找到对应占用文件，清理不需要的日志
+            level: P1
+            ruleGroupName: windows-alert
+            ruleName: '[P1]-Windows 硬盘空间使用率高'
+            type: windows
+        - expr: windows_system_system_up_time < 300
+          alert: '[P0]-Windows 服务器已重启'
+          for: 1m
+          labels:
+            severity: error
+          annotations:
+            description: 实例为 {{ $labels.instance }} 的服务器，Uptime<5分钟，服务器已重启
+            level: P0
+            ruleGroupName: windows-alert
+            ruleName: '[P0]-Windows 服务器已重启'
+            type: windows
+        - expr: windows_service_status{status="ok",name="mssqlserver"} == 0
+          alert: '[P0]-Mssqlserver服务不健康'
+          for: 30s
+          labels:
+            severity: error
+          annotations:
+            description: 实例为 {{ $labels.instance }} 的服务器，服务 {{ $labels.name }}，状态不健康，请检查服务器服务
+            level: P1
+            ruleGroupName: windows-alert
+            ruleName: '[P0]-Mssqlserver服务不健康'
+            type: windows
+        - expr: 100 - ((windows_os_physical_memory_free_bytes / windows_cs_physical_memory_bytes) * 100) > 90
+          alert: '[P2]-Windows 内存使用率高'
+          for: 5m
+          labels:
+            severity: warn
+          annotations:
+            description: 实例为 {{ $labels.instance }} 的服务器，内存使用率高> 90%，实际使用率为{{ humanize $value }}%，找到对应进程，留意业务高峰
+            level: P2
+            ruleGroupName: windows-alert
+            ruleName: '[P2]-Windows 内存使用率高'
+            type: windows
+        - expr: 100.0 - 100 * ((windows_logical_disk_free_bytes / 1024 / 1024 ) / (windows_logical_disk_size_bytes / 1024 / 1024)) >  85
+          alert: '[P2]-Windows 硬盘空间使用率高'
+          for: 5m
+          labels:
+            severity: warn
+          annotations:
+            description: 实例为 {{ $labels.instance }} 的服务器，硬盘空间使用率高> 85%，实际使用率为{{ humanize $value }}%，找到对应占用文件，清理不需要的日志
+            level: P2
+            ruleGroupName: windows-alert
+            ruleName: '[P2]-Windows 硬盘空间使用率高'
+            type: windows
+        - expr: 100 - (avg by (instance) (rate(windows_cpu_time_total{mode="idle"}[1m])) * 100) > 95
+          alert: '[P1]-Windows CPU使用率高'
+          for: 5m
+          labels:
+            severity: error
+          annotations:
+            description: 实例为 {{ $labels.instance }} 的服务器，CPU使用率高> 95%，实际使用率为{{ humanize $value }}%，找到对应进程，留意业务高峰
+            level: P1
+            ruleGroupName: windows-alert
+            ruleName: '[P1]-Windows CPU使用率高'
+            type: windows
+        - expr: 100 - (avg by (instance) (rate(windows_cpu_time_total{mode="idle"}[1m])) * 100) > 85
+          alert: '[P2]-Windows CPU使用率高'
+          for: 5m
+          labels:
+            severity: warn
+          annotations:
+            description: 实例为 {{ $labels.instance }} 的服务器，CPU使用率高> 85%，实际使用率为{{ humanize $value }}%，找到对应进程，留意业务高峰
+            level: P2
+            ruleGroupName: windows-alert
+            ruleName: '[P2]-Windows CPU使用率高'
+            type: windows
+        - expr: 100 - (avg by (instance) (rate(windows_cpu_time_total{mode="idle"}[1m])) * 100) > 70
+          alert: '[P3]-Windows CPU使用率高'
+          for: 5m
+          labels:
+            severity: info
+          annotations:
+            description: 实例为 {{ $labels.instance }} 的服务器，CPU使用率高> 70%，实际使用率为{{ humanize $value }}%，找到对应进程，留意业务高峰
+            level: P3
+            ruleGroupName: windows-alert
+            ruleName: '[P3]-Windows CPU使用率高'
+            type: windows
+        - expr: 100 - ((windows_os_physical_memory_free_bytes / windows_cs_physical_memory_bytes) * 100) > 85
+          alert: '[P3]-Windows 内存使用率高'
+          for: 5m
+          labels:
+            severity: info
+          annotations:
+            description: 实例为 {{ $labels.instance }} 的服务器，内存使用率高> 85%，实际使用率为{{ humanize $value }}%，找到对应进程，留意业务高峰
+            level: P3
+            ruleGroupName: windows-alert
+            ruleName: '[P3]-Windows 内存使用率高'
+            type: windows
