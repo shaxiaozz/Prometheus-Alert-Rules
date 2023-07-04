@@ -1,0 +1,284 @@
+kind: PrometheusRule
+apiVersion: monitoring.coreos.com/v1
+metadata:
+  prometheus: dx
+spec:
+  groups:
+    - name: node-alert
+      interval: 10m
+      rules:
+        - expr: rate(node_disk_read_time_seconds_total{device=~"d.*"}[1m])/rate(node_disk_reads_completed_total{device=~"d.*"}[1m]) > 0.2
+          alert: '[P2]-Node 硬盘读取延迟大'
+          for: 5m
+          labels:
+            severity: warn
+          annotations:
+            description: 实例为 {{ $labels.instance }} 的服务器，硬盘读取延迟大 > 0.2s
+            level: P2
+            ruleGroupName: node-alert
+            ruleName: '[P2]-Node 硬盘读取延迟大'
+            type: node
+        - expr: abs(time()-node_time_seconds) > 100
+          alert: '[P1]-Node 系统时间与实际存在差异'
+          for: 3m
+          labels:
+            severity: error
+          annotations:
+            description: 实例为 {{ $labels.instance }} 的服务器，系统时间与实际存在差异，请检查系统时间
+            level: P1
+            ruleGroupName: node-alert
+            ruleName: '[P1]-Node 系统时间与实际存在差异'
+            type: node
+        - expr: node_sockstat_sockets_used > 5000
+          alert: '[P3]-Node Socket连接数高'
+          for: 5m
+          labels:
+            severity: info
+          annotations:
+            description: 实例为 {{ $labels.instance }} 的服务器，Socket连接数> 5000，实际连接数为{{ $value }}，注意业务高峰
+            level: P3
+            ruleGroupName: node-alert
+            ruleName: '[P3]-Node Socket连接数高'
+            type: node
+        - expr: rate(node_disk_reads_completed_total[1m]) > 3000
+          alert: '[P2]-Node 硬盘读取IOPS高'
+          for: 3m
+          labels:
+            severity: warn
+          annotations:
+            description: 实例为 {{ $labels.instance }} 的服务器，硬盘读取IOPS>3000，实际IOPS为{{ humanize $value }}，注意运行的job或业务高峰导致
+            level: P2
+            ruleGroupName: node-alert
+            ruleName: '[P2]-Node 硬盘读取IOPS高'
+            type: node
+        - expr: rate(node_network_receive_bytes_total{device!~'tap.*|veth.*|br.*|docker.*|vir.*|lo.*|vnet.*|cni.*|kube.*|dummy.*'}[1m]) / 1024 / 1024 > 200
+          alert: '[P2]-Node 流入流量高'
+          for: 10m
+          labels:
+            severity: warn
+          annotations:
+            description: 实例为 {{ $labels.instance }} 的服务器，流入流量>200M，实际流量为{{ humanize $value }}，注意运行的job或业务高峰导致
+            level: P2
+            ruleGroupName: node-alert
+            ruleName: '[P2]-Node 流入流量高'
+            type: node
+        - expr: node_filefd_allocated / node_filefd_maximum * 100 > 95
+          alert: '[P1]-Node 文件描述符使用率高'
+          for: 5m
+          labels:
+            severity: error
+          annotations:
+            description: 实例为 {{ $labels.instance }} 的服务器，文件描述符使用率高> 95%，实际使用率为{{ humanize $value }}%，检查应用状态，检查系统限制值
+            level: P1
+            ruleGroupName: node-alert
+            ruleName: '[P1]-Node 文件描述符使用率高'
+            type: node
+        - expr: rate(node_disk_read_bytes_total[1m]) / 1024 / 1024 > 200
+          alert: '[P3]-Node 硬盘读取数据量高'
+          for: 10m
+          labels:
+            severity: info
+          annotations:
+            description: 实例为 {{ $labels.instance }} 的服务器，硬盘读取数据量>200M，实际数据量为{{ humanize $value }}，注意运行的job或业务高峰导致
+            level: P3
+            ruleGroupName: node-alert
+            ruleName: '[P3]-Node 硬盘读取数据量高'
+            type: node
+        - expr: rate(node_disk_writes_completed_total[1m]) > 3000
+          alert: '[P2]-Node 硬盘写入IOPS高'
+          for: 3m
+          labels:
+            severity: warn
+          annotations:
+            description: 实例为 {{ $labels.instance }} 的服务器，硬盘写入IOPS高>3000，实际IOPS为{{ humanize $value }}，注意运行的job或业务高峰导致
+            level: P2
+            ruleGroupName: node-alert
+            ruleName: '[P2]-Node 硬盘写入IOPS高'
+            type: node
+        - expr: irate(node_disk_io_time_seconds_total[1m]) * 100 > 60
+          alert: '[P2]-Node 磁盘IO耗时占比高'
+          for: 5m
+          labels:
+            severity: warn
+          annotations:
+            description: 实例为 {{ $labels.instance }} 的服务器，系统磁盘IO耗时占比>60%，实际占比为{{ humanize $value }}%，检查应用状态
+            level: P2
+            ruleGroupName: node-alert
+            ruleName: '[P2]-Node 磁盘IO耗时占比高'
+            type: node
+        - expr: time()-node_boot_time_seconds < 100
+          alert: '[P0]-Node 服务器已重启'
+          for: 1m
+          labels:
+            severity: error
+          annotations:
+            description: 实例为 {{ $labels.instance }} 的服务器，Uptime<100秒，服务器已重启
+            level: P0
+            ruleGroupName: node-alert
+            ruleName: '[P0]-Node 服务器已重启'
+            type: node
+        - expr: (100-(avg(rate(node_cpu_seconds_total{mode="idle"}[1m])) by (instance,namespace))*100) > 95
+          alert: '[P1]-Node CPU使用率高'
+          for: 5m
+          labels:
+            severity: error
+          annotations:
+            description: 实例为 {{ $labels.instance }} 的服务器，CPU使用率>95%，实际使用率为{{ humanize $value }}%，找到对应进程，检查业务状态，留意业务高峰
+            level: P1
+            ruleGroupName: node-alert
+            ruleName: '[P1]-Node CPU使用率高'
+            type: node
+        - expr: (node_memory_MemTotal_bytes - node_memory_Buffers_bytes-node_memory_Cached_bytes - node_memory_MemFree_bytes - node_memory_Slab_bytes-node_memory_PageTables_bytes - node_memory_SwapCached_bytes) / node_memory_MemTotal_bytes *100 > 85
+          alert: '[P2]-Node 内存使用率高'
+          for: 5m
+          labels:
+            severity: warn
+          annotations:
+            description: 实例为 {{ $labels.instance }} 的服务器，内存使用率高> 85%，实际使用率为{{ humanize $value }}%，找到对应进程，留意业务高峰
+            level: P2
+            ruleGroupName: node-alert
+            ruleName: '[P2]-Node 内存使用率高'
+            type: node
+        - expr: (100-(node_filesystem_avail_bytes{device!~"rootfs"}/node_filesystem_size_bytes{device!~"rootfs"})*100) > 85
+          alert: '[P2]-Node 硬盘空间使用率高'
+          for: 5m
+          labels:
+            severity: warn
+          annotations:
+            description: 实例为 {{ $labels.instance }} 的服务器，硬盘空间使用率高> 85%，实际使用率为{{ humanize $value }}%，找到对应占用文件，清理不需要的日志
+            level: P2
+            ruleGroupName: node-alert
+            ruleName: '[P2]-Node 硬盘空间使用率高'
+            type: node
+        - expr: (avg by(instance,namespace)(rate(node_cpu_seconds_total{mode="iowait"}[1m]))*100) > 20
+          alert: '[P2]-Node CPU IO等待时间占比高'
+          for: 5m
+          labels:
+            severity: warn
+          annotations:
+            description: 实例为 {{ $labels.instance }} 的服务器，CPU IO等待时间占比>20%，实际占比为{{ humanize $value }}%，检查服务器IO状态
+            level: P2
+            ruleGroupName: node-alert
+            ruleName: '[P2]-Node CPU IO等待时间占比高'
+            type: node
+        - expr: (node_memory_MemTotal_bytes - node_memory_Buffers_bytes-node_memory_Cached_bytes - node_memory_MemFree_bytes -node_memory_Slab_bytes-node_memory_PageTables_bytes - node_memory_SwapCached_bytes) / node_memory_MemTotal_bytes *100 > 95
+          alert: '[P1]-Node 内存使用率高'
+          for: 5m
+          labels:
+            severity: error
+          annotations:
+            description: 实例为 {{ $labels.instance }} 的服务器，内存使用率高> 95%，实际使用率为{{ humanize $value }}%，找到对应进程，留意业务高峰
+            level: P1
+            ruleGroupName: node-alert
+            ruleName: '[P1]-Node 内存使用率高'
+            type: node
+        - expr: (100-(node_filesystem_avail_bytes{device!~"rootfs"}/node_filesystem_size_bytes{device!~"rootfs"})*100) > 95
+          alert: '[P1]-Node 硬盘空间使用率高'
+          for: 5m
+          labels:
+            severity: error
+          annotations:
+            description: 实例为 {{ $labels.instance }} 的服务器，硬盘空间使用率高> 95%，实际使用率为{{ humanize $value }}%，找到对应占用文件，清理不需要的日志
+            level: P1
+            ruleGroupName: node-alert
+            ruleName: '[P1]-Node 硬盘空间使用率高'
+            type: node
+        - expr: rate(node_disk_write_time_seconds_total{device=~"d.*"}[1m]) / rate(node_disk_writes_completed_total{device=~"d.*"}[1m]) > 0.2
+          alert: '[P2]-Node 硬盘写入延迟大'
+          for: 5m
+          labels:
+            severity: warn
+          annotations:
+            description: 实例为 {{ $labels.instance }} 的服务器，硬盘写入延迟大 > 0.2s，检查应用状态
+            level: P2
+            ruleGroupName: node-alert
+            ruleName: '[P2]-Node 硬盘写入延迟大'
+            type: node
+        - expr: node_sockstat_TCP_tw > 5000
+          alert: '[P3]-Node TIME_WAIT连接数高'
+          for: 5m
+          labels:
+            severity: info
+          annotations:
+            description: 实例为 {{ $labels.instance }} 的服务器，TIME_WAIT连接数> 5000，实际连接数为{{ $value }}，注意业务高峰
+            level: P3
+            ruleGroupName: node-alert
+            ruleName: '[P3]-Node TIME_WAIT连接数高'
+            type: node
+        - expr: node_filefd_allocated / node_filefd_maximum * 100 > 80
+          alert: '[P2]-Node 文件描述符使用率高'
+          for: 5m
+          labels:
+            severity: warn
+          annotations:
+            description: 实例为 {{ $labels.instance }} 的服务器，文件描述符使用率高> 80%，实际使用率为{{ humanize $value }}%，检查应用状态，检查系统限制值
+            level: P2
+            ruleGroupName: node-alert
+            ruleName: '[P2]-Node 文件描述符使用率高'
+            type: node
+        - expr: (100-(avg(rate(node_cpu_seconds_total{mode="idle"}[1m])) by (instance,namespace))*100) > 85
+          alert: '[P2]-Node CPU使用率高'
+          for: 5m
+          labels:
+            severity: warn
+          annotations:
+            description: 实例为 {{ $labels.instance }} 的服务器，CPU使用率>85%，实际使用率为{{ humanize $value }}%，找到对应进程，检查业务状态，留意业务高峰
+            level: P2
+            ruleGroupName: node-alert
+            ruleName: '[P2]-Node CPU使用率高'
+            type: node
+        - expr: (100-(node_filesystem_files_free{device!~"rootfs"}/node_filesystem_files{device!~"rootfs"}*100)) > 85
+          alert: '[P2]-Node 硬盘inodes使用率高'
+          for: 5m
+          labels:
+            severity: warn
+          annotations:
+            description: 实例为 {{ $labels.instance }} 的服务器，硬盘inodes使用率> 85%，实际使用率为{{ humanize $value }}%，找到对应占用文件，清理不需要的日志
+            level: P2
+            ruleGroupName: node-alert
+            ruleName: '[P2]-Node 硬盘inodes使用率高'
+            type: node
+        - expr: (100-(node_filesystem_files_free{device!~"rootfs",mountpoint=~"/|/app|home"}/node_filesystem_files{device!~"rootfs",mountpoint=~"/|/app|home"}*100)) > 95
+          alert: '[P1]-Node 硬盘inodes使用率高'
+          for: 5m
+          labels:
+            severity: error
+          annotations:
+            description: 实例为 {{ $labels.instance }} 的服务器，硬盘inodes使用率> 95%，实际使用率为{{ humanize $value }}%，找到对应占用文件，清理不需要的日志
+            level: P1
+            ruleGroupName: node-alert
+            ruleName: '[P1]-Node 硬盘inodes使用率高'
+            type: node
+        - expr: rate(node_disk_written_bytes_total{device=~"d.*"}[1m])/ 1024 / 1024 > 200
+          alert: '[P3]-Node 硬盘写入数据量高'
+          for: 10m
+          labels:
+            severity: info
+          annotations:
+            description: 实例为 {{ $labels.instance }} 的服务器，硬盘写入数据量>200M，实际数据量为{{ humanize $value }}，注意运行的job或业务高峰导致
+            level: P3
+            ruleGroupName: node-alert
+            ruleName: '[P3]-Node 硬盘写入数据量高'
+            type: node
+        - expr: (rate(node_network_receive_errs_total{device!~'tap.*|veth.*|br.*|docker.*|vir.*|lo.*|vnet.*|cni.*|kube.*|dummy.*'}[1m]) / rate(node_network_receive_packets_total{device!~'t*|br.*|docker.*|vir.*|lo.*|vnet.*|cni.*|kube.*|dummy.*'}[1m]))*100 > 10
+          alert: '[P1]-Node 数据包接收错误率高'
+          for: 3m
+          labels:
+            severity: error
+          annotations:
+            description: 实例为 {{ $labels.instance }} 的服务器，数据包接收错误率>10%，实际错误率为{{ humanize $value }}
+            level: P1
+            ruleGroupName: node-alert
+            ruleName: '[P1]-Node 数据包接收错误率高'
+            type: node
+        - expr: up{instance=~".*9100"}==0
+          alert: '[P1]-Node-Exporter Down'
+          for: 3m
+          labels:
+            severity: error
+          annotations:
+            description: 实例为 {{ $labels.instance }} 的服务器中Node_Exporter未运行
+            level: P1
+            ruleGroupName: node-alert
+            ruleName: '[P1]-Node-Exporter Down'
+            type: node

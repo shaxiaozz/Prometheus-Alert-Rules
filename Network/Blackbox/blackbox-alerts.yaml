@@ -1,0 +1,108 @@
+kind: PrometheusRule
+apiVersion: monitoring.coreos.com/v1
+metadata:
+  prometheus: dx
+spec:
+  groups:
+    - name: blackbox-alert
+      interval: 10m
+      rules:
+        - expr: probe_duration_seconds{module=~"http.*"} > 0.5 and probe_success{module=~"http.*"} >= 1
+          alert: '[P2]- HTTP访问延迟高'
+          for: 3m
+          labels:
+            severity: warn
+          annotations:
+            description: HTTP访问延迟值已持续3分钟从源{{ $labels.source }}去往{{ $labels.target }}处于0.5~1s之间，请检查服务状态,检查网络连通性
+            level: P2
+            ruleGroupName: blackbox-alert
+            ruleName: '[P2]- HTTP访问延迟高'
+            type: blackbox
+        - expr: probe_duration_seconds{module="tcp_connect"} > 0.2
+          alert: '[P2]-网络TCP连接延迟高'
+          for: 3m
+          labels:
+            severity: warn
+          annotations:
+            description: 网络TCP连接延迟已持续3分钟从源{{ $labels.source }}去往{{ $labels.target }}高于200ms，请检查服务状态,检查网络连通性
+            level: P2
+            ruleGroupName: blackbox-alert
+            ruleName: '[P2]-网络TCP连接延迟高'
+            type: blackbox
+        - expr: 100 - sum_over_time(probe_success{module="tcp_connect"}[1m]) / count_over_time(probe_success{module="tcp_connect"}[1m]) * 100 > 30
+          alert: '[P3]-网络TCP连接失败率高'
+          for: 1m
+          labels:
+            severity: info
+          annotations:
+            description: 网络TCP连接失败率已持续1分钟从源{{ $labels.source }}去往{{ $labels.target }}高于30%，请检查服务状态,检查网络连通性
+            level: P3
+            ruleGroupName: blackbox-alert
+            ruleName: '[P3]-网络TCP连接失败率高'
+            type: blackbox
+        - expr: 100 - sum_over_time(probe_success{module="tcp_connect"}[1m]) / count_over_time(probe_success{module="tcp_connect"}[1m]) * 100 > 30
+          alert: '[P1]-网络TCP连接失败率高'
+          for: 5m
+          labels:
+            severity: error
+          annotations:
+            description: 网络TCP连接失败率已持续5分钟从源{{ $labels.source }}去往{{ $labels.target }}高于30%，请检查服务状态,检查网络连通性
+            level: P1
+            ruleGroupName: blackbox-alert
+            ruleName: '[P1]-网络TCP连接失败率高'
+            type: blackbox
+        - expr: probe_duration_seconds{module=~"http.*"} > 0.5 and probe_success{module=~"http.*"} >= 1
+          alert: '[P1]- HTTP访问延迟高'
+          for: 5m
+          labels:
+            severity: error
+          annotations:
+            description: HTTP访问延迟值已持续5分钟从源{{ $labels.source }}去往{{ $labels.target }}处于0.5~1s之间，请检查服务状态,检查网络连通性
+            level: P1
+            ruleGroupName: blackbox-alert
+            ruleName: '[P1]- HTTP访问延迟高'
+            type: blackbox
+        - expr: probe_duration_seconds{module="tcp_connect"} > 0.2
+          alert: '[P1]-网络TCP连接延迟高'
+          for: 5m
+          labels:
+            severity: error
+          annotations:
+            description: 网络TCP连接延迟已持续5分钟从源{{ $labels.source }}去往{{ $labels.target }}高于200ms，请检查服务状态,检查网络连通性
+            level: P1
+            ruleGroupName: blackbox-alert
+            ruleName: '[P1]-网络TCP连接延迟高'
+            type: blackbox
+        - expr: probe_duration_seconds{module=~"http.*"} > 0.5 and probe_success{module=~"http.*"} >= 1
+          alert: '[P3]- HTTP访问延迟高'
+          for: 1m
+          labels:
+            severity: info
+          annotations:
+            description: HTTP访问延迟值已持续1分钟从源{{ $labels.source }}去往{{ $labels.target }}处于0.5~1s之间，请检查服务状态,检查网络连通性
+            level: P3
+            ruleGroupName: blackbox-alert
+            ruleName: '[P3]- HTTP访问延迟高'
+            type: blackbox
+        - expr: probe_duration_seconds{module="tcp_connect"} > 0.2
+          alert: '[P3]-网络TCP连接延迟高'
+          for: 1m
+          labels:
+            severity: info
+          annotations:
+            description: 网络TCP连接延迟已持续1分钟从源{{ $labels.source }}去往{{ $labels.target }}高于200ms，请检查服务状态,检查网络连通性
+            level: P3
+            ruleGroupName: blackbox-alert
+            ruleName: '[P3]-网络TCP连接延迟高'
+            type: blackbox
+        - expr: 100 - sum_over_time(probe_success{module="tcp_connect"}[1m]) / count_over_time(probe_success{module="tcp_connect"}[1m]) * 100 > 30
+          alert: '[P2]-网络TCP连接失败率高'
+          for: 3m
+          labels:
+            severity: warn
+          annotations:
+            description: 网络TCP连接失败率已持续3分钟从源{{ $labels.source }}去往{{ $labels.target }}高于30%，请检查服务状态,检查网络连通性
+            level: P2
+            ruleGroupName: blackbox-alert
+            ruleName: '[P2]-网络TCP连接失败率高'
+            type: blackbox

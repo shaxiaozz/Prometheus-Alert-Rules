@@ -1,0 +1,130 @@
+kind: PrometheusRule
+apiVersion: monitoring.coreos.com/v1
+metadata:
+  prometheus: dx
+spec:
+  groups:
+    - name: redis-alert
+      interval: 10m
+      rules:
+        - expr: redis_up == 0
+          alert: '[P0]-Redis Down'
+          for: 1m
+          labels:
+            severity: error
+          annotations:
+            description: 实例为{{ $labels.instance }}的Redis宕机，请立即检查Redis实例
+            level: P0
+            ruleGroupName: redis-alert
+            ruleName: '[P0]-Redis Down'
+            type: redis
+        - expr: redis_memory_used_bytes / redis_memory_max_bytes  * 100 > 80
+          alert: '[P3-]Redis内存使用率高'
+          for: 5m
+          labels:
+            severity: info
+          annotations:
+            description: 实例为{{ $labels.instance }}的Redis节点内存使用率高于80%，请检查Redis实例
+            level: P3
+            ruleGroupName: redis-alert
+            ruleName: '[P3-]Redis内存使用率高'
+            type: redis
+        - expr: rate(redis_connected_clients[1m]) > 100
+          alert: '[P2]-Redis客户端新建连接数高'
+          for: 5m
+          labels:
+            severity: warn
+          annotations:
+            description: 实例为{{ $labels.instance }}的Redis节点1分钟内客户端新建连接数大于100
+            level: P2
+            ruleGroupName: redis-alert
+            ruleName: '[P2]-Redis客户端新建连接数高'
+            type: redis
+        - expr: increase(redis_rejected_connections_total[1m]) > 1
+          alert: '[P1]-Redis存在拒绝客户端连接情况'
+          for: 1m
+          labels:
+            severity: critical
+          annotations:
+            description: 实例为{{ $labels.instance }}的Redis节点存在拒绝客户端连接情况，请立即检查Redis实例
+            level: P1
+            ruleGroupName: redis-alert
+            ruleName: '[P1]-Redis存在拒绝客户端连接情况'
+            type: redis
+        - expr: rate(redis_commands_processed_total[1m]) > 600
+          alert: '[P1]-Redis QPS高'
+          for: 3m
+          labels:
+            severity: critical
+          annotations:
+            description: 实例为{{ $labels.instance }}的Redis节点QPS大于300
+            level: P1
+            ruleGroupName: redis-alert
+            ruleName: '[P1]-Redis QPS高'
+            type: redis
+        - expr:  rate(redis_last_slow_execution_duration_seconds[1m]) > 0.5
+          alert: '[P1]-Redis发生慢查询'
+          for: 3m
+          labels:
+            severity: error
+          annotations:
+            description: 实例为{{ $labels.instance }}的Redis节点，在过去1分钟内慢查询大于500ms
+            level: P1
+            ruleGroupName: redis-alert
+            ruleName: '[P1]-Redis发生慢查询'
+            type: redis
+        - expr: delta(redis_connected_slaves[1m]) < 0
+          alert: '[P1]-Redis丢失从节点'
+          for: 1m
+          labels:
+            severity: error
+          annotations:
+            description: 实例为{{ $labels.instance }}的Redis丢失从节点，请立即检查Redis实例
+            level: P1
+            ruleGroupName: redis-alert
+            ruleName: '[P1]-Redis丢失从节点'
+            type: redis
+        - expr: redis_memory_used_bytes / redis_memory_max_bytes  * 100 > 90
+          alert: '[P2-]Redis内存使用率高'
+          for: 5m
+          labels:
+            severity: warn
+          annotations:
+            description: 实例为{{ $labels.instance }}的Redis节点内存使用率高于90%，请检查Redis实例
+            level: P2
+            ruleGroupName: redis-alert
+            ruleName: '[P2-]Redis内存使用率高'
+            type: redis
+        - expr: rate(redis_commands_processed_total[1m]) > 300
+          alert: '[P2]-Redis QPS高'
+          for: 3m
+          labels:
+            severity: warn
+          annotations:
+            description: 实例为{{ $labels.instance }}的Redis节点QPS大于100
+            level: P2
+            ruleGroupName: redis-alert
+            ruleName: '[P2]-Redis QPS高'
+            type: redis
+        - expr: rate(redis_last_slow_execution_duration_seconds[1m]) > 0.2
+          alert: '[P2]-Redis发生慢查询'
+          for: 3m
+          labels:
+            severity: warn
+          annotations:
+            description: 实例为{{ $labels.instance }}的Redis节点，在过去1分钟内慢查询大于200ms
+            level: P2
+            ruleGroupName: redis-alert
+            ruleName: '[P2]-Redis发生慢查询'
+            type: redis
+        - expr: redis_connected_clients < 5
+          alert: '[P2]-Redis客户端连接数低'
+          for: 5m
+          labels:
+            severity: warn
+          annotations:
+            description: 实例为{{ $labels.instance }}的Redis节点，客户端连接数低于5
+            level: P2
+            ruleGroupName: redis-alert
+            ruleName: '[P2]-Redis客户端连接数低'
+            type: redis
