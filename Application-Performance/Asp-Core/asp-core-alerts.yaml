@@ -1,0 +1,75 @@
+kind: PrometheusRule
+apiVersion: monitoring.coreos.com/v1
+metadata:
+  prometheus: dx
+spec:
+  groups:
+    - name: asp-core-alert
+      interval: 10m
+      rules:
+        - expr: increase(http_requests_received_total{status=~"5..|4..",status!="404",uri!~"/actuator/.*"}[1m]) > 20
+          alert: [P1]-最近1分钟接口错误数量高>20
+          for: 1m
+          labels:
+            severity: error
+          annotations:
+            description: 服务为 {{ $labels.controller}}的接口，最近1分钟错误数量高于20次
+            level: P1
+            ruleGroupName: asp-core-alert
+            ruleName: '[P1]-最近1分钟接口错误数量高>20'
+            type: asp.net
+        - expr: sum(rate(http_requests_received_total[1m])) by (endpoint,instance,controller,namespace) > 1000
+          alert: [P2]-服务QPS高>1000
+          for: 3m
+          labels:
+            severity: warn
+          annotations:
+            description: 实例为 {{ $labels.instance }} 的 {{ $labels.controller }}应用中，QPS高于1000，实际QPS为 {{ $value }}
+            level: P2
+            ruleGroupName: asp-core-alert
+            ruleName: [P2]-服务QPS高>1000
+            type: asp.net
+        - expr: sum(rate(http_requests_received_total[1m])) by (endpoint,instance,controller,namespace) > 3000
+          alert: [P1]-服务QPS高>3000
+          for: 3m
+          labels:
+            severity: error
+          annotations:
+            description: 实例为 {{ $labels.instance }} 的 {{ $labels.controller }}应用中，QPS高于3000，实际QPS为 {{ $value }}，检查业务状态，留意业务高峰
+            level: P1
+            ruleGroupName: asp-core-alert
+            ruleName: [P1]-服务QPS高>3000
+            type: asp.net
+        - expr: increase(http_requests_received_total{status=~"5..|4..",status!="404",uri!~"/actuator/.*"}[1m]) > 10
+          alert: [P2]-最近1分钟接口错误数量高>10
+          for: 1m
+          labels:
+            severity: warn
+          annotations:
+            description: 服务为 {{ $labels.controller}}的接口，最近1分钟错误数量高于10次
+            level: P2
+            ruleGroupName: asp-core-alert
+            ruleName: [P2]-最近1分钟接口错误数量高>10
+            type: asp.net
+        - expr: histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket[1m])) by (le,namespace,instance)) > 0.05
+          alert: [P2]-P99延迟高>50ms
+          for: 3m
+          labels:
+            severity: warn
+          annotations:
+            description: 实例为 {{ $labels.instance }} 的应用中，此示例的接口P99延时已高于50ms，实际P99延迟为 {{ $value }}
+            level: P2
+            ruleGroupName: asp-core-alert
+            ruleName: [P2]-P99延迟高>50ms
+            type: asp.net
+        - expr: histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket[1m])) by (le,namespace,instance)) > 0.1
+          alert: [P1]-P99延迟高>100ms
+          for: 3m
+          labels:
+            severity: error
+          annotations:
+            description: 实例为 {{ $labels.instance }} 的应用中，此示例的接口P99延时已高于100ms，实际P99延迟为 {{ $value }}
+            level: P1
+            ruleGroupName: asp-core-alert
+            ruleName: [P1]-P99延迟高>100ms
+            type: asp.net

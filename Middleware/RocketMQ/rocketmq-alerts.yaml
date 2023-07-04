@@ -1,0 +1,152 @@
+kind: PrometheusRule
+apiVersion: monitoring.coreos.com/v1
+metadata:
+  prometheus: dx
+spec:
+  groups:
+    - name: rocketmq-alert
+      interval: 10m
+      rules:
+        - expr: rocketmq_brokeruntime_commitlog_disk_ratio * 100  > 70
+          alert: [P3]-RocketMQ 磁盘空间不足
+          for: 5m
+          labels:
+            severity: info
+          annotations:
+            description: 实例为 {{ $labels.brokerIP }} RocketMQ 磁盘空间少于30%，实际只剩余{{ humanize $value }}%，请检查MQ实例
+            level: P3
+            ruleGroupName: rocketmq-alert
+            ruleName: [P3]-RocketMQ 磁盘空间不足
+            type: rocketmq
+        - expr: rocketmq_brokeruntime_commitlog_disk_ratio * 100  > 90
+          alert: [P1]-RocketMQ 磁盘空间不足
+          for: 5m
+          labels:
+            severity: error
+          annotations:
+            description: 实例为 {{ $labels.brokerIP }} RocketMQ 磁盘空间少于10%，实际只剩余{{ humanize $value }}%，请检查MQ实例
+            level: P1
+            ruleGroupName: rocketmq-alert
+            ruleName: [P1]-RocketMQ 磁盘空间不足
+            type: rocketmq
+        - expr: rocketmq_brokeruntime_pmdt_200to500ms > 2
+          alert: [P2]-RocketMQ 消息提交耗时高
+          for: 1m
+          labels:
+            severity: warn
+          annotations:
+            description: 实例为 {{ $labels.brokerIP }} RocketMQ 消息提交耗时需要200~500ms，请检查MQ实例
+            level: P2
+            ruleGroupName: rocketmq-alert
+            ruleName: [P2]-RocketMQ 消息提交耗时高
+            type: rocketmq
+        - expr: sum(rocketmq_broker_tps - rocketmq_broker_tps offset 30s) by (namespace, cluster) > 1200
+          alert: [P3]-RocketMQ 发送tps激增
+          for: 2m
+          labels:
+            severity: info
+          annotations:
+            description: {{$labels.cluster}}集群, 发送tps在过去30s内出现激增已超过1200, 当前增加量：{{$value}}
+            level: P3
+            ruleGroupName: rocketmq-alert
+            ruleName: [P3]-RocketMQ 发送tps激增
+            type: rocketmq
+        - expr: sum(rocketmq_broker_tps - rocketmq_broker_tps offset 30s) by (namespace, cluster) > 3000
+          alert: [P1]-RocketMQ 发送tps激增
+          for: 2m
+          labels:
+            severity: error
+          annotations:
+            description: {{$labels.cluster}}集群, 发送tps在过去30s内出现激增已超过3000, 当前增加量：{{$value}}
+            level: P1
+            ruleGroupName: rocketmq-alert
+            ruleName: [P1]-RocketMQ 发送tps激增
+            type: rocketmq
+        - expr: sum(rocketmq_group_diff) by (namespace,group,topic) >  300
+          alert: [P3]-RocketMQ消息堆积
+          for: 5m
+          labels:
+            severity: info
+          annotations:
+            description: topic为{{ $labels.topic }}，存在消息堆积情况，堆积量已大于300
+            level: P3
+            ruleGroupName: rocketmq-alert
+            ruleName: [P3]-RocketMQ消息堆积
+            type: rocketmq
+        - expr: sum(rocketmq_group_diff) by (namespace,group,topic) >  4000
+          alert: [P1]-RocketMQ消息堆积
+          for: 5m
+          labels:
+            severity: error
+          annotations:
+            description: topic为{{ $labels.topic }}，存在消息堆积情况，堆积量已大于4000
+            level: P1
+            ruleGroupName: rocketmq-alert
+            ruleName: [P1]-RocketMQ消息堆积
+            type: rocketmq
+        - expr: rocketmq_brokeruntime_commitlog_disk_ratio * 100  > 80
+          alert: [P2]-RocketMQ 磁盘空间不足
+          for: 5m
+          labels:
+            severity: warn
+          annotations:
+            description: 实例为 {{ $labels.brokerIP }} RocketMQ 磁盘空间少于20%，实际只剩余{{ humanize $value }}%，请检查MQ实例
+            level: P2
+            ruleGroupName: rocketmq-alert
+            ruleName: [P2]-RocketMQ 磁盘空间不足
+            type: rocketmq
+        - expr:rocketmq_brokeruntime_send_threadpoolqueue_headwait_timemills > 200
+          alert: [P2]-RocketMQ broker 繁忙
+          for: 5m
+          labels:
+            severity: warn
+          annotations:
+            description: 实例为 {{ $labels.brokerIP }} RocketMQ broker 处于繁忙，实际的值为{{ humanize $value }}%，请检查MQ实例
+            level: P2
+            ruleGroupName: rocketmq-alert
+            ruleName: [P2]-RocketMQ broker 繁忙
+            type: rocketmq
+        - expr: rocketmq_brokeruntime_pmdt_100to200ms > 2
+          alert: [P3]-RocketMQ 消息提交耗时高
+          for: 1m
+          labels:
+            severity: info
+          annotations:
+            description: 实例为 {{ $labels.brokerIP }} RocketMQ 消息提交耗时需要100~200ms，请检查MQ实例
+            level: P3
+            ruleGroupName: rocketmq-alert
+            ruleName: [P3]-RocketMQ 消息提交耗时高
+            type: rocketmq
+        - expr: rocketmq_brokeruntime_pmdt_500to1s > 2
+          alert: [P1]-RocketMQ 消息提交耗时高
+          for: 1m
+          labels:
+            severity: error
+          annotations:
+            description: 实例为 {{ $labels.brokerIP }} RocketMQ 消息提交耗时存在500~1s，请检查MQ实例
+            level: P1
+            ruleGroupName: rocketmq-alert
+            ruleName: [P1]-RocketMQ 消息提交耗时高
+            type: rocketmq
+        - expr: sum(rocketmq_broker_tps - rocketmq_broker_tps offset 30s) by (namespace, cluster) > 2000
+          alert: [P2]-RocketMQ 发送tps激增
+          for: 2m
+          labels:
+            severity: warn
+          annotations:
+            description: {{$labels.cluster}}集群, 发送tps在过去30s内出现激增已超过2000, 当前增加量：{{$value}}
+            level: P2
+            ruleGroupName: rocketmq-alert
+            ruleName: [P2]-RocketMQ 发送tps激增
+            type: rocketmq
+        - expr: sum(rocketmq_group_diff) by (namespace,group,topic) >  500
+          alert: [P2]-RocketMQ消息堆积
+          for: 5m
+          labels:
+            severity: warn
+          annotations:
+            description: topic为{{ $labels.topic }}，存在消息堆积情况，堆积量已大于500
+            level: P2
+            ruleGroupName: rocketmq-alert
+            ruleName: [P2]-RocketMQ消息堆积
+            type: rocketmq

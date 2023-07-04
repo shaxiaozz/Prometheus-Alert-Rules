@@ -1,0 +1,31 @@
+kind: PrometheusRule
+apiVersion: monitoring.coreos.com/v1
+metadata:
+  prometheus: dx
+spec:
+  groups:
+    - name: kafka-alert
+      interval: 10m
+      rules:
+        - expr: avg by(topic, partition, project,namespace,instance,application) (kafka_consumergroup_lag{topic!="__consumer_offsets"}) > 50000
+          alert: '[P3]-Kafka消息堆积高'
+          for: 5m
+          labels:
+            severity: info
+          annotations:
+            description: 实例为 {{ $labels.application }} 的Kafka，topic：{{ $labels.topic }} 消息堆积高于50000条，实际堆积量为{{ humanize $value }}
+            level: P3
+            ruleGroupName: kafka-alert
+            ruleName: [P3]-Kafka消息堆积高
+            type: kafka
+        - expr: avg by(topic, partition, project,namespace,instance,application) (kafka_consumergroup_lag{topic!="__consumer_offsets"}) > 70000
+          alert: [P2]-Kafka消息堆积高
+          for: 5m
+          labels:
+            severity: warn
+          annotations:
+            description: 实例为 {{ $labels.application }} 的Kafka，topic：{{ $labels.topic }} 消息堆积高于70000条，实际堆积量为{{ humanize $value }}
+            level: P2
+            ruleGroupName: kafka-alert
+            ruleName: [P2]-Kafka消息堆积高
+            type: kafka

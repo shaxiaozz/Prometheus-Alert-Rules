@@ -1,0 +1,86 @@
+kind: PrometheusRule
+apiVersion: monitoring.coreos.com/v1
+metadata:
+  prometheus: dx
+spec:
+  groups:
+    - name: elasticsearch-alert
+      interval: 10m
+      rules:
+        - expr: (1 - (elasticsearch_filesystem_data_available_byteselasticsearch-alert / elasticsearch_filesystem_data_size_byteselasticsearch-alert)) * 100 > 80
+          alert: [P2]-ES节点磁盘使用率高
+          for: 5m
+          labels:
+            severity: warn
+          annotations:
+            description: {{ $labels.instance }} ES节点磁盘使用率已超80%，路径为{{ $labels.path }}，实际使用率为 {{ $value }}%
+            level: P2
+            ruleGroupName: elasticsearch-alert
+            ruleName: [P2]-ES节点磁盘使用率高
+            type: elasticsearch
+        - expr: elasticsearch_process_cpu_percentelasticsearch-alert > 80
+          alert: [P2]-ES节点CPU使用率高
+          for: 5m
+          labels:
+            severity: warn
+          annotations:
+            description: {{ $labels.instance }} ES节点CPU使用率已超80%，实际使用率为 {{ $value }}%
+            level: P2
+            ruleGroupName: elasticsearch-alert
+            ruleName: [P2]-ES节点CPU使用率高
+            type: elasticsearch
+        - expr: elasticsearch_node_stats_up{namespace="digital-cb1-prd"} == 0
+          alert: '[P0]-ES节点Down'
+          for: 30s
+          labels:
+            severity: error
+          annotations:
+            description: ES 节点{{ $labels.instance }} 已死掉超过30s
+            level: P0
+            ruleGroupName: elasticsearch-alert
+            ruleName: [P0]-ES节点Down
+            type: elasticsearch
+        - expr: elasticsearch_cluster_health_status{color="red"} == 1
+          alert: [P1]-ES集群健康度为红色
+          for: 5m
+          labels:
+            severity: warn
+          annotations:
+            description: {{ $labels.instance }}ES集群健康度为红色,已影响对外提供服务,请检查集群各节点情况
+            level: P2
+            ruleGroupName: elasticsearch-alert
+            ruleName: [P1]-ES集群健康度为红色
+            type: elasticsearch
+        - expr: (1 - (elasticsearch_filesystem_data_available_byteselasticsearch-alert / elasticsearch_filesystem_data_size_byteselasticsearch-alert)) * 100 > 90
+          alert: '[P1]-ES节点磁盘使用率高'
+          for: 5m
+          labels:
+            severity: error
+          annotations:
+            description: {{ $labels.instance }} ES节点磁盘使用率已超90%，路径为{{ $labels.path }}，实际使用率为 {{ $value }}%
+            level: P1
+            ruleGroupName: elasticsearch-alert
+            ruleName: [P1]-ES节点磁盘使用率高
+            type: elasticsearch
+        - expr: elasticsearch_cluster_health_status{color="yellow"} == 1
+          alert: [P2]-ES集群健康度为黄色
+          for: 5m
+          labels:
+            severity: warn
+          annotations:
+            description: {{ $labels.instance }} ES集群健康度为黄色,请检查集群各节点情况
+            level: P2
+            ruleGroupName: elasticsearch-alert
+            ruleName: [P2]-ES集群健康度为黄色
+            type: elasticsearch
+        - expr: elasticsearch_process_cpu_percentelasticsearch-alert > 90
+          alert: [P1]-ES节点CPU使用率高
+          for: 5m
+          labels:
+            severity: error
+          annotations:
+            description: {{ $labels.instance }} ES节点CPU使用率已超90%，实际使用率为 {{ $value }}%
+            level: P1
+            ruleGroupName: elasticsearch-alert
+            ruleName: [P1]-ES节点CPU使用率高
+            type: elasticsearch

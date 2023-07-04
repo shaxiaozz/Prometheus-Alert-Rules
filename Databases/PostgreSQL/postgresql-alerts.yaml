@@ -1,0 +1,64 @@
+kind: PrometheusRule
+apiVersion: monitoring.coreos.com/v1
+metadata:
+  prometheus: dx
+spec:
+  groups:
+    - name: postgresql-alert
+      interval: 10m
+      rules:
+        - expr: sum by (datname,namespace,application,instance) (pg_stat_activity_count{datname!~"template.*|postgres"}) > pg_settings_max_connections * 0.9
+          alert: [P2]-PGSQL连接数使用率高
+          for: 5m
+          labels:
+            severity: warn
+          annotations:
+            description: 实例为 {{ $labels.application }} 的数据库，PGSQL连接数使用率> 90%，实际使用率为{{ humanize $value }}，请保持观察数据库和业务运行的稳定
+            level: P2
+            ruleGroupName: postgresql-alert
+            ruleName: [P2]-PGSQL连接数使用率高
+            type: postgresql
+        - expr: sum by (datname,namespace,application,instance) (pg_stat_activity_count{datname!~"template.*|postgres"}) > pg_settings_max_connections * 0.8
+          alert: '[P3]-PGSQL连接数使用率高'
+          for: 5m
+          labels:
+            severity: info
+          annotations:
+            description: 实例为 {{ $labels.application }} 的数据库，PGSQL连接数使用率> 80%，实际使用率为{{ humanize $value }}，请保持观察数据库和业务运行的稳定
+            level: P3
+            ruleGroupName: postgresql-alert
+            ruleName: [P3]-PGSQL连接数使用率高
+            type: postgresql
+        - expr: pg_exporter_last_scrape_error > 0
+          alert: [P1]-PGSQL Exporter Error
+          for: 2m
+          labels:
+            severity: error
+          annotations:
+            description: 实例为{{ $labels.instance }}的Postgresql导出器存在错误，请立即检查Exporter实例
+            level: P2
+            ruleGroupName: postgresql-alert
+            ruleName: [P1]-PGSQL Exporter Error
+            type: postgresql
+        - expr: pg_up == 0
+          alert: [P0]-PGSQL Down
+          for: 1m
+          labels:
+            severity: error
+          annotations:
+            description: 实例为{{ $labels.application }}的PGSQL宕机，请立即检查PGSQL实例
+            level: P0
+            ruleGroupName: postgresql-alert
+            ruleName: [P0]-PGSQL Down
+            type: postgresql
+        - expr: increase(pg_stat_database_deadlocks{datname!~"template.*|postgres"}[1m]) > 5
+          alert: [P1]-PGSQL存在死锁
+          for: 1m
+          labels:
+            severity: error
+          annotations:
+            description: 实例为{{ $labels.application }}的PGSQL存在死锁数量已大于5，实际数量为{{ $value }}，请立即检查PGSQL实例
+            level: P1
+            ruleGroupName: postgresql-alert
+            ruleName: [P1]-PGSQL存在死锁
+            type: postgresql

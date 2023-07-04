@@ -1,0 +1,64 @@
+kind: PrometheusRule
+apiVersion: monitoring.coreos.com/v1
+metadata:
+  prometheus: dx
+spec:
+  groups:
+    - name: mongodb-alert
+      interval: 10m
+      rules:
+        - expr: mongodb_uptime_ns < 60
+          alert: [P1]-MongoDB服务发生重启
+          for: 1m
+          labels:
+            severity: error
+          annotations:
+            description: 实例为 {{ $labels.instance }} 的MongoDB实例已重启，请检查数据库实例
+            level: P1
+            ruleGroupName: mongodb-alert
+            ruleName: [P1]-MongoDB服务发生重启
+            type: mongodb
+        - expr: mongodb_connections_current / mongodb_connections_available *100 > 95
+          alert: [P2]-MongoDB连接数使用率高
+          for: 5m
+          labels:
+            severity: warn
+          annotations:
+            description: 实例为 {{ $labels.instance }} MongoDB连接数使用率> 95%，实际使用率为{{ humanize $value }}%，请保持观察数据库和业务运行的稳定
+            level: P2
+            ruleGroupName: mongodb-alert
+            ruleName: [P2]-MongoDB连接数使用率高
+            type: mongodb
+        - expr: mongodb_net_out_bytes / 1024 / 1024 > 50
+          alert: [P3]-MongoDB 出站流量高
+          for: 5m
+          labels:
+            severity: info
+          annotations:
+            description: 实例为 {{ $labels.instance }} MongoDB实例，入站流量已高于50MB，实际为{{ humanize $value }}，请保持观察数据库和业务运行的稳定
+            level: P3
+            ruleGroupName: mongodb-alert
+            ruleName: [P3]-MongoDB 出站流量高
+            type: mongodb
+        - expr: mongodb_connections_current / mongodb_connections_available *100 > 85
+          alert: [P3]-MongoDB连接数使用率高
+          for: 5m
+          labels:
+            severity: info
+          annotations:
+            description: 实例为 {{ $labels.instance }} MongoDB连接数使用率> 85%，实际使用率为{{ humanize $value }}%，请保持观察数据库和业务运行的稳定
+            level: P3
+            ruleGroupName: mongodb-alert
+            ruleName: [P3]-MongoDB连接数使用率高
+            type: mongodb
+        - expr: mongodb_net_in_bytes / 1024 / 1024 > 20
+          alert: [P3]-MongoDB 入站流量高
+          for: 5m
+          labels:
+            severity: info
+          annotations:
+            description: 实例为 {{ $labels.instance }} MongoDB实例，入站流量已高于20MB，实际为{{ humanize $value }}，请保持观察数据库和业务运行的稳定
+            level: P3
+            ruleGroupName: mongodb-alert
+            ruleName: [P3]-MongoDB 入站流量高
+            type: mongodb
