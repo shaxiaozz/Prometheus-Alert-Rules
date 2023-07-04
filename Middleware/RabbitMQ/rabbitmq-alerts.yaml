@@ -1,0 +1,119 @@
+kind: PrometheusRule
+apiVersion: monitoring.coreos.com/v1
+metadata:
+  prometheus: dx
+spec:
+  groups:
+    - name: rabbitmq-alert
+      interval: 10m
+      rules:
+        - expr: increase(rabbitmq_channel_messages_unroutable_returned_total[1m]) > 0 or increase(rabbitmq_channel_messages_unroutable_dropped_total[1m]) > 0
+          alert: '[P1]-RabbitMQ 不可路由的消息'
+          for: 2m
+          labels:
+            severity: error
+          annotations:
+            description: 实例为{{ $labels.instance }}的RabbitMQ队列中有无法路由的消息
+            level: P1
+            ruleGroupName: rabbitmq-alert
+            ruleName: '[P1]-RabbitMQ 不可路由的消息'
+            type: rabbitmq
+        - expr: rabbitmq_connections > 100
+          alert: '[P3]-RabbitMQ 连接太多'
+          for: 5m
+          labels:
+            severity: info
+          annotations:
+            description: 实例为{{ $labels.instance }}的RabbitMQ，连接已高于100
+            level: P3
+            ruleGroupName: rabbitmq-alert
+            ruleName: '[P3]-RabbitMQ 连接太多'
+            type: rabbitmq
+        - expr: rabbitmq_process_resident_memory_bytes / rabbitmq_resident_memory_limit_bytes * 100 > 85
+          alert: '[P2]-RabbitMQ节点内存使用率高'
+          for: 5m
+          labels:
+            severity: warn
+          annotations:
+            description: 实例为{{ $labels.instance }}的RabbitMQ，内存使用率已高于85%
+            level: P2
+            ruleGroupName: rabbitmq-alert
+            ruleName: '[P2]-RabbitMQ节点内存使用率高'
+            type: rabbitmq
+        - expr: rabbitmq_build_info == 0
+          alert: '[P0]-Rabbitmq 节点宕机'
+          for: 1m
+          labels:
+            severity: error
+          annotations:
+            description: 实例为 {{ $labels.instance }} RabbitMQ实例宕机，请检查MQ实例
+            level: P0
+            ruleGroupName: rabbitmq-alert
+            ruleName: '[P0]-Rabbitmq 节点宕机'
+            type: rabbitmq
+        - expr: rabbitmq_process_resident_memory_bytes / rabbitmq_resident_memory_limit_bytes * 100 > 70
+          alert: '[P3]-RabbitMQ节点内存使用率高'
+          for: 5m
+          labels:
+            severity: info
+          annotations:
+            description: 实例为{{ $labels.instance }}的RabbitMQ，内存使用率已高于70%
+            level: P3
+            ruleGroupName: rabbitmq-alert
+            ruleName: '[P3]-RabbitMQ节点内存使用率高'
+            type: rabbitmq
+        - expr: erlang_vm_dist_node_state < 3
+          alert: '[P0]-Rabbitmq 节点未分布'
+          for: 1m
+          labels:
+            severity: error
+          annotations:
+            description: 实例为 {{ $labels.instance }} RabbitMQ实例分发链接状态不为UP，请检查实例
+            level: P0
+            ruleGroupName: rabbitmq-alert
+            ruleName: '[P0]-Rabbitmq 节点未分布'
+            type: rabbitmq
+        - expr: rate(rabbitmq_queue_messages_unacked[1m]) > 100
+          alert: '[P1]-RabbitMQ Unack 消息太多'
+          for: 5m
+          labels:
+            severity: error
+          annotations:
+            description: 实例为{{ $labels.instance }}的RabbitMQ，未确认的消息大于100条
+            level: P1
+            ruleGroupName: rabbitmq-alert
+            ruleName: '[P1]-RabbitMQ Unack 消息太多'
+            type: rabbitmq
+        - expr: rabbitmq_connections > 300
+          alert: '[P2]-RabbitMQ 连接太多'
+          for: 5m
+          labels:
+            severity: warn
+          annotations:
+            description: 实例为{{ $labels.instance }}的RabbitMQ，连接已高于300
+            level: P2
+            ruleGroupName: rabbitmq-alert
+            ruleName: '[P2]-RabbitMQ 连接太多'
+            type: rabbitmq
+        - expr: rabbitmq_process_open_fds / rabbitmq_process_max_fds * 100 > 70
+          alert: '[P3]-RabbitMQ节点文件描述符使用率高'
+          for: 5m
+          labels:
+            severity: info
+          annotations:
+            description: 实例为{{ $labels.instance }}的RabbitMQ，节点文件描述符使用率已高于70%
+            level: P3
+            ruleGroupName: rabbitmq-alert
+            ruleName: '[P3]-RabbitMQ节点文件描述符使用率高'
+            type: rabbitmq
+        - expr: rabbitmq_process_open_fds / rabbitmq_process_max_fds * 100 > 85
+          alert: '[P2]-RabbitMQ节点文件描述符使用率高'
+          for: 5m
+          labels:
+            severity: warn
+          annotations:
+            description: 实例为{{ $labels.instance }}的RabbitMQ，节点文件描述符使用率已高于85%
+            level: P2
+            ruleGroupName: rabbitmq-alert
+            ruleName: '[P2]-RabbitMQ节点文件描述符使用率高'
+            type: rabbitmq

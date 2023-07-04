@@ -1,0 +1,86 @@
+kind: PrometheusRule
+apiVersion: monitoring.coreos.com/v1
+metadata:
+  prometheus: dx
+spec:
+  groups:
+    - name: jvm-alert
+      interval: 10m
+      rules:
+        - expr: increase(http_server_requests_seconds_count{status=~"5..|4..",status!="404",uri!~"/actuator/.*"}[1m]) > 10
+          alert: '[P2]-最近1分钟接口错误数量高>10'
+          for: 1m
+          labels:
+            severity: warn
+          annotations:
+            description: 服务为 {{ $labels.application}}的接口，最近1分钟错误数量高于10次
+            level: P2
+            ruleGroupName: jvm-alert
+            ruleName: '[P2]-最近1分钟接口错误数量高>10'
+            type: jvm
+        - expr: sum(rate(http_server_requests_seconds_count{uri!~"/metrics/prometheus"}[1m])) by (namespace,instance,application) > 200
+          alert: '[P2]-服务QPS高>200'
+          for: 3m
+          labels:
+            severity: warn
+          annotations:
+            description: 实例为 {{ $labels.instance }} 的 {{ $labels.application }}应用中，QPS高于200，实际QPS为 {{ $value }}
+            level: P2
+            ruleGroupName: jvm-alert
+            ruleName: '[P2]-服务QPS高>200'
+            type: jvm
+        - expr: jvm_threads_states_threads{state="blocked"} > 0
+          alert: '[P0]-Java应用线程状态出现Blocked'
+          for: 2m
+          labels:
+            severity: critical
+          annotations:
+            description: 服务为 {{ $labels.application}}，线程状态出现Blocked情况，当前Blocked线程数为{{ $value }}
+            ruleGroupName: app-digital-p360-prd-idc-jvm-alert
+            ruleName: '[P0]-Java应用线程状态出现Blocked'
+            level: P0
+            type: jvm
+        - expr: sum(rate(http_server_requests_seconds_sum{status!~"5.."}[1m])) by (namespace,instance,application,uri) / sum(rate(http_server_requests_seconds_count{status!~"5.."}[1m])) by (namespace,instance,application,uri) > 0.5
+          alert: '[P2]-接口延迟高>500ms'
+          for: 3m
+          labels:
+            severity: warn
+          annotations:
+            description: 实例为 {{ $labels.instance }} 的 {{ $labels.application }}应用中，接口{{ $labels.uri }} 在3m内，接口延迟持续高于1s，实际延迟时间为 {{ $value }}
+            level: P2
+            ruleGroupName: jvm-alert
+            ruleName: '[P2]-接口延迟高>500ms'
+            type: jvm
+        - expr: sum(rate(http_server_requests_seconds_sum{status!~"5.."}[1m])) by (namespace,instance,application,uri) / sum(rate(http_server_requests_seconds_count{status!~"5.."}[1m])) by (namespace,instance,application,uri) > 1
+          alert: '[P1]-接口延迟高>1s'
+          for: 3m
+          labels:
+            severity: error
+          annotations:
+            description: 实例为 {{ $labels.instance }} 的 {{ $labels.application }}应用中，接口{{ $labels.uri }} 在3m内，接口延迟高于2s，实际延迟时间为 {{ $value }}
+            level: P1
+            ruleGroupName: app-digital-p360-prd-idc-jvm-alert
+            ruleName: '[P1]-接口延迟高>1s'
+            type: jvm
+        - expr: histogram_quantile(0.99,sum(rate(http_server_requests_seconds_bucket[1m])) by (le,uri,namespace,application)) > 0.5
+          alert: '[P1]-接口P99高于500ms'
+          for: 3m
+          labels:
+            severity: error
+          annotations:
+            description: 实例为 {{ $labels.instance }} 的 {{ $labels.application }}应用中，接口{{ $labels.uri }} 在2m内，接口P99高于500ms，实际为 {{ $value }}
+            level: P1
+            ruleGroupName: jvm-alert
+            ruleName: '[P1]-接口P99高于500ms'
+            type: jvm
+        - expr: histogram_quantile(0.99,sum(rate(http_server_requests_seconds_bucket[1m])) by (le,uri,namespace,application)) > 0.3
+          alert: '[P2]-接口P99高于300ms'
+          for: 2m
+          labels:
+            severity: warn
+          annotations:
+            description: 实例为 {{ $labels.instance }} 的 {{ $labels.application }}应用中，接口{{ $labels.uri }} 在2m内，接口P99高于200ms，实际为 {{ $value }}
+            level: P2
+            ruleGroupName: jvm-alert
+            ruleName: '[P2]-接口P99高于300ms'
+            type: jvm
